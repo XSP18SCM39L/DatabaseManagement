@@ -5,12 +5,11 @@
 #include <stdlib.h>
 
 // local functions
-static void printStrat (BM_BufferPool *const bm);
+static void printStrat(BM_BufferPool *const bm);
 
 // external functions
-void 
-printPoolContent (BM_BufferPool *const bm)
-{
+void
+printPoolContent(BM_BufferPool *const bm) {
   PageNumber *frameContent;
   bool *dirty;
   int *fixCount;
@@ -22,16 +21,15 @@ printPoolContent (BM_BufferPool *const bm)
 
   printf("{");
   printStrat(bm);
-  printf(" %i}: ", bm->numPages); 
-  
+  printf(" %i}: ", bm->numPages);
+
   for (i = 0; i < bm->numPages; i++)
-      printf("%s[%i%s%i]", ((i == 0) ? "" : ",") , frameContent[i], (dirty[i] ? "x": " "), fixCount[i]);
+    printf("%s[%i%s%i]", ((i == 0) ? "" : ","), frameContent[i], (dirty[i] ? "x" : " "), fixCount[i]);
   printf("\n");
 }
 
 char *
-sprintPoolContent (BM_BufferPool *const bm)
-{
+sprintPoolContent(BM_BufferPool *const bm) {
   PageNumber *frameContent;
   bool *dirty;
   int *fixCount;
@@ -45,26 +43,25 @@ sprintPoolContent (BM_BufferPool *const bm)
   fixCount = getFixCounts(bm);
 
   for (i = 0; i < bm->numPages; i++)
-    pos += sprintf(message + pos, "%s[%i%s%i]", ((i == 0) ? "" : ",") , frameContent[i], (dirty[i] ? "x": " "), fixCount[i]);
-  
+    pos += sprintf(message + pos, "%s[%i%s%i]", ((i == 0) ? "" : ","), frameContent[i], (dirty[i] ? "x" : " "),
+                   fixCount[i]);
+
   return message;
 }
 
 
 void
-printPageContent (BM_PageHandle *const page)
-{
+printPageContent(BM_PageHandle *const page) {
   int i;
 
   printf("[Page %i]\n", page->pageNum);
 
   for (i = 1; i <= PAGE_SIZE; i++)
-    printf("%02X%s%s", page->data[i], (i % 8) ? "" : " ", (i % 64) ? "" : "\n"); 
+    printf("%02X%s%s", page->data[i], (i % 8) ? "" : " ", (i % 64) ? "" : "\n");
 }
 
 char *
-sprintPageContent (BM_PageHandle *const page)
-{
+sprintPageContent(BM_PageHandle *const page) {
   int i;
   char *message;
   int pos = 0;
@@ -73,16 +70,14 @@ sprintPageContent (BM_PageHandle *const page)
   pos += sprintf(message + pos, "[Page %i]\n", page->pageNum);
 
   for (i = 1; i <= PAGE_SIZE; i++)
-    pos += sprintf(message + pos, "%02X%s%s", page->data[i], (i % 8) ? "" : " ", (i % 64) ? "" : "\n"); 
-  
+    pos += sprintf(message + pos, "%02X%s%s", page->data[i], (i % 8) ? "" : " ", (i % 64) ? "" : "\n");
+
   return message;
 }
 
 void
-printStrat (BM_BufferPool *const bm)
-{
-  switch (bm->strategy)
-    {
+printStrat(BM_BufferPool *const bm) {
+  switch (bm->strategy) {
     case RS_FIFO:
       printf("FIFO");
       break;
@@ -101,5 +96,5 @@ printStrat (BM_BufferPool *const bm)
     default:
       printf("%i", bm->strategy);
       break;
-    }
+  }
 }

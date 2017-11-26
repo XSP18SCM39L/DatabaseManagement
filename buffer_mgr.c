@@ -95,7 +95,7 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
   return RC_OK;
 }
 
-//cause all dirty pages with fix count 0 from the buffer pool to be written to disk
+// cause all dirty pages with fix count 0 from the buffer pool to be written to disk
 RC forceFlushPool(BM_BufferPool *const bm) {
 
   if (bm->pageFile == NULL) return RC_NO_FILENAME;
@@ -105,16 +105,13 @@ RC forceFlushPool(BM_BufferPool *const bm) {
   //force every dirty page with fixcount 0 to write into disk
   int i = 0;
   for (i = 0; i < bm->numPages; i++) {
-    if (bm->frame[i].empty == 1 && bm->frame[i].dirty == 1 && bm->frame[i].fixCount == 0) {
-      // printf("\n*************************************************************************force pool\n");
+    if (bm->frame[i].empty == 1 && bm->frame[i].dirty == 1) {
       writeBlock(bm->frame[i].pageNum, &fHandle, (SM_PageHandle) (bm->frame[i].data));
       bm->frame[i].dirty = 0;
       bm->numWrite++;
     }
   }
 
-  //8888888888888
-  // fclose(fHandle.mgmtInfo);
   return RC_OK;
 }
 
@@ -232,8 +229,6 @@ RC pinPage(BM_BufferPool *const bm, BM_PageHandle *const page,
           current->next = NULL;
           bm->tail = current;
         }
-
-
       }
 
       copyPage(&bm->frame[i], page);

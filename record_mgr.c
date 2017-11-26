@@ -22,12 +22,12 @@
 /* Functions for table and manager */
 RC initRecordManager(void *mgmtData) {
   initStorageManager();
-  printf("RecordManager has been initialized!");
+  printf("Record Manager has been initialized!\n");
   return RC_OK;
 }
 
 RC shutdownRecordManager() {
-  printf("RecordManager has been shut down!");
+  printf("Record Manager has been shut down!\n");
   return RC_OK;
 }
 
@@ -40,32 +40,7 @@ RC createTable(char *name, Schema *schema) {
   SM_PageHandle fPage1 = (SM_PageHandle) calloc(1, PAGE_SIZE * sizeof(char));
   if (openPageFile(name, &fHandle) != RC_OK) return RC_FILE_NOT_FOUND;
 
-  //copy schema into the first page
-  /*
-  sprintf((char*)fPage, "%d", schema->numAttr);
-  int i = 0;
-  while(i < schema->numAttr){
-      sprintf((char*)fPage, "%s%s", (char*)fPage, schema->attrNames[i]);
-      i++;
-  }
-  i = 0;
-  while(i < schema->numAttr){
-      sprintf((char*)fPage, "%s%d", (char*)fPage, schema->dataTypes[i]);
-      i++;
-  }
-  i = 0;
-  while(i < schema->numAttr){
-      sprintf((char*)fPage, "%s%d", (char*)fPage, schema->typeLength[i]);
-      i++;
-  }
-  i = 0;
-  while(i < schema->keySize){
-      sprintf((char*)fPage, "%s%d", (char*)fPage, schema->keyAttrs[i]);
-      i++;
-  }
-  sprintf((char*)fPage, "%s%d", (char*)fPage, schema->keySize);
-  sprintf((char*)fPage, "%s%d", (char*)fPage, 0);*/
-
+  // copy schema into the first page
   //store numAttr, keysize, size of names
   char *pointer = (char *) fPage;
   *(int *) pointer = schema->numAttr;//number of attributes
@@ -73,32 +48,33 @@ RC createTable(char *name, Schema *schema) {
   *(int *) pointer = schema->keySize;//number of key
   pointer += sizeof(int);
   int i;
+  // Record length of the attr names
   for (i = 0; i < schema->numAttr; i++) {
-    *(int *) pointer = (int) strlen(schema->attrNames[i]);//number of the attrnames
+    *(int *) pointer = (int) strlen(schema->attrNames[i]);
     pointer += sizeof(int);
   }
   for (i = 0; i < schema->numAttr; i++) {
     strcpy((char *) pointer, schema->attrNames[i]);
-    pointer += sizeof(char) * ((int) strlen(schema->attrNames[i]) + 1);//names of attr
+    pointer += sizeof(char) * ((int) strlen(schema->attrNames[i])); //names of attr
   }
   for (i = 0; i < schema->numAttr; i++) {
-    *(int *) pointer = (int) schema->dataTypes[i];//datatype
+    *(int *) pointer = (int) schema->dataTypes[i]; //datatype
     pointer += sizeof(int);
   }
   for (i = 0; i < schema->numAttr; i++) {
-    *(int *) pointer = (int) schema->typeLength[i];//typelenth especially for string
+    *(int *) pointer = schema->typeLength[i]; //typelenth especially for string
     pointer += sizeof(int);
   }
   for (i = 0; i < schema->keySize; i++) {
-    *(int *) pointer = (int) schema->keyAttrs[i];//size of key
+    *(int *) pointer = schema->keyAttrs[i]; //size of key
     pointer += sizeof(int);
   }
-  *(int *) pointer = 0;//number of record/tuples
+  *(int *) pointer = 0; //number of record/tuples
   pointer += sizeof(int);
 
-  // the 0 page contains the information of the schema and so on
+  // the 0th page contains the information of the schema and so on
   if (writeBlock(0, &fHandle, fPage) != RC_OK) return RC_WRITE_TO_OUTPUTSTREAM_FAILED;
-  // the 1 page start to store the record
+  // the 1st page start to store the record
   if (appendEmptyBlock(&fHandle) != RC_OK) return RC_ERROR;
   if (writeBlock(1, &fHandle, fPage1) != RC_OK) return RC_WRITE_TO_OUTPUTSTREAM_FAILED;
 
@@ -115,52 +91,45 @@ RC openTable(RM_TableData *rel, char *name) {
   BM_BufferPool *bm = MAKE_POOL();
   BM_PageHandle *ph = MAKE_PAGE_HANDLE();//pined page from disk
   if (initBufferPool(bm, name, 50, RS_FIFO, NULL) != RC_OK) return RC_ERROR;
-  pinPage(bm, ph, 0);// find the page
 
-  /*read schema and numtuple
-   Schema *result;
-   char *names[] = { "a", "b", "c" };
-   DataType dt[] = { DT_INT, DT_STRING, DT_INT };
-   int sizes[] = { 0, 4, 0 };
-   int keys[] = {0};
-   int i;
-   char **cpNames = (char **) malloc(sizeof(char*) * 3);
-   DataType *cpDt = (DataType *) malloc(sizeof(DataType) * 3);
-   int *cpSizes = (int *) malloc(sizeof(int) * 3);
-   int *cpKeys = (int *) malloc(sizeof(int));
-   for(i = 0; i < 3; i++)
-   {
-   cpNames[i] = (char *) malloc(2);
-   strcpy(cpNames[i], names[i]);
-   }
-   memcpy(cpDt, dt, sizeof(DataType) * 3);
-   memcpy(cpSizes, sizes, sizeof(int) * 3);
-   memcpy(cpKeys, keys, sizeof(int));
+  rel->bm = bm;
+  SM_FileHandle fHandle;
+  if (openPageFile(name, &fHandle) != RC_OK) return RC_FILE_NOT_FOUND;
+  rel->fHandle = fHandle;
 
-   result = createSchema(3, cpNames, cpDt, cpSizes, 1, cpKeys);*/
-  //use pointer to get different type of value
+  pinPage(bm, ph, 0); // find the page
+
+  // use pointer to get different types of value
   char *pointer = ph->data;
   int numAttr = *(pointer);
   pointer += sizeof(int);
   int keySize = *(pointer);
   pointer += sizeof(int);
-  int *nameLength = malloc(sizeof(int) * numAttr);
+  int *attrNameLength = malloc(sizeof(int) * numAttr);
   int i;
   for (i = 0; i < numAttr; i++) {
-    nameLength[i] = (int) *(pointer);
+    attrNameLength[i] = (int) *(pointer);
     pointer += sizeof(int);
   }
   char **attrNames = (char **) malloc(sizeof(char *) * numAttr);
   for (i = 0; i < numAttr; i++) {
-    attrNames[i] = (char *) malloc(nameLength[i]);
-    strcpy(attrNames[i], (char *) pointer);
-    pointer += nameLength[i];
+    attrNames[i] = (char *) malloc(attrNameLength[i]);
+    memcpy(attrNames[i], pointer, attrNameLength[i]);
+    pointer += attrNameLength[i];
   }
+
   DataType *dataTypes = (DataType *) malloc(sizeof(DataType) * numAttr);
   for (i = 0; i < numAttr; i++) {
     dataTypes[i] = (DataType) (*pointer);
     pointer += sizeof(int);
   }
+
+  int *typeLength = malloc(sizeof(int) * numAttr);
+  for (i = 0; i < numAttr; i++) {
+    typeLength[i] =  *pointer;
+    pointer += sizeof(int);
+  }
+
   int *keyAttrs = (int *) malloc(sizeof(int) * keySize);
   for (i = 0; i < keySize; i++) {
     keyAttrs[i] = (int) (*pointer);
@@ -172,25 +141,27 @@ RC openTable(RM_TableData *rel, char *name) {
   schema->numAttr = numAttr;
   schema->keySize = keySize;
   schema->attrNames = attrNames;
+  schema->typeLength = typeLength;
   schema->dataTypes = dataTypes;
   schema->keyAttrs = keyAttrs;
 
   rel->schema = schema;
-  rel->mgmtData = bm;
+  rel->bm = bm;
   rel->numTuple = numtuple;
 
   return RC_OK;
 }
 
-// closting a table should cause all outstanding changed to the table to be written to the page file
+// closing a table should cause all outstanding changed to the table to be written to the page file
 RC closeTable(RM_TableData *rel) {
-  if (shutdownBufferPool(rel->mgmtData) != RC_OK) return RC_ERROR;
+  if (shutdownBufferPool(rel->bm) != RC_OK) return RC_ERROR;
+  free(rel->bm);
   free(rel->schema->attrNames);
   free(rel->schema->dataTypes);
   free(rel->schema->keyAttrs);
   free(rel->schema->typeLength);
   free(rel->schema);
-  free(rel);
+
   return RC_OK;
 }
 
@@ -207,46 +178,187 @@ int getNumTuples(RM_TableData *rel) {
 /* Function for handling records in a table */
 // insert a new record. assign an RID to this record and update the record parameter passed to insertRecord
 RC insertRecord(RM_TableData *rel, Record *record) {
-  BM_BufferPool *bm = rel->mgmtData;
+  BM_BufferPool *bm = rel->bm;
+  SM_FileHandle *fHandle = &(rel->fHandle);
   BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+
+  // scan record from the page 1 to total pagenumber
+  // if we can find empty slot in the existed pages just use it
+  int recordSizeIndisk = sizeof(int) + getRecordSize(rel->schema);
+  int numPerPage = PAGE_SIZE / recordSizeIndisk;
+  int i = 1;
+  while (i < rel->fHandle.totalNumPages) {
+    pinPage(bm, ph, i);
+    int j = 0;
+    for (j = 0; j < numPerPage; j++) {
+      char *pointer = ph->data + j * recordSizeIndisk;
+      if (*pointer == 0) {
+        *pointer = 1;
+        memcpy(pointer + sizeof(int), record->data, getRecordSize(rel->schema));
+        markDirty(bm, ph);
+
+        record->id.page = i;
+        record->id.slot = j;
+        rel->numTuple += 1;
+        return RC_OK;
+      }
+    }
+    i++;
+  }
+
+  //if we cannot find empty slot, create a new empty page
+  appendEmptyBlock(fHandle);
+  pinPage(bm, ph, i);
+  char *pointer = ph->data;
+  *pointer = 1;
+  memcpy(pointer + sizeof(int), record->data, getRecordSize(rel->schema));
+  markDirty(bm, ph);
+
+  record->id.page = i;
+  record->id.slot = 0;
+
+  rel->numTuple += 1;
   return RC_OK;
 }
 
 RC deleteRecord(RM_TableData *rel, RID id) {
+  BM_BufferPool *bm = rel->bm;
+  SM_FileHandle *fHandle = &(rel->fHandle);
+  BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+
+  int recordInDisk = sizeof(int) + getRecordSize(rel->schema);
+  int numPerPage = PAGE_SIZE/recordInDisk;
+
+  //delete record, to mark the record unused
+  if(id.page > fHandle->totalNumPages || id.slot >= numPerPage) {
+    printf("DeleteRecord: RID out of range: %d, %d\n", id.page, id.slot);
+    return RC_ERROR;
+  }
+
+  pinPage(bm, ph, id.page);
+  char *pointer = ph->data;
+  pointer += recordInDisk * id.slot;
+
+  *(pointer) = 0;
+
+  rel->numTuple -= 1;
 
   return RC_OK;
 }
 
 RC updateRecord(RM_TableData *rel, Record *record) {
+  BM_BufferPool *bm = rel->bm;
+  SM_FileHandle fHandle = rel->fHandle;
+  BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+
+  int recordInDisk = sizeof(int) + getRecordSize(rel->schema);
+  int numPerPage = PAGE_SIZE / recordInDisk;
+
+  if (record->id.page >= fHandle.totalNumPages || record->id.slot >= numPerPage) {
+    printf("UpdateRecord: RID out of range: %d, %d\n", record->id.page, record->id.slot);
+    return RC_ERROR;
+  }
+  pinPage(bm, ph, record->id.page);
+  char *pointer = ph->data;
+  pointer += recordInDisk * record->id.slot;
+
+  if (*pointer == 1) {
+    memcpy(pointer + sizeof(int), record->data, getRecordSize(rel->schema));
+  }
 
   return RC_OK;
 }
 
 RC getRecord(RM_TableData *rel, RID id, Record *record) {
+  BM_BufferPool *bm = rel->bm;
+  SM_FileHandle fHandle = rel->fHandle;
+  BM_PageHandle *ph = MAKE_PAGE_HANDLE();
 
-  return RC_OK;
+  int recordSizeInDisk = sizeof(int) + getRecordSize(rel->schema);
+  int numPerPage = PAGE_SIZE / recordSizeInDisk;
+
+  if (id.page >= fHandle.totalNumPages || id.slot >= numPerPage) {
+    printf("RID out of range: page: %d, slot: %d.\n", id.page, id.slot);
+    return RC_ERROR;
+  }
+
+  pinPage(bm, ph, id.page);
+  char *pointer = ph->data;
+  pointer += recordSizeInDisk * id.slot;
+
+  if (*pointer == 1) {
+    record->id.page = id.page;
+    record->id.slot = id.slot;
+    pointer += sizeof(int);
+    memcpy(record->data, pointer, getRecordSize(rel->schema));
+
+    return RC_OK;
+  }
+
+  // Not found
+  return RC_RM_RECORD_NOT_FOUND;
 }
 
 /* Functions related to scans */
-// initiate a scan to retrieve all tuples from a table that fullfill a certain conditon. Starting a scan initialize the RM_ScanHandle data structure passed as an argument to startscan 
+// initiate a scan to retrieve all tuples from a table that fulfill a certain conditon. Starting a scan initialize the RM_ScanHandle data structure passed as an argument to startscan
 RC startScan(RM_TableData *rel, RM_ScanHandle *scan, Expr *cond) {
   scan->rel = rel;
   scan->mgmtData = NULL;
   scan->page = 1;
-  scan->slot = 1;
+  scan->slot = 0;
   scan->e = cond;
   return RC_OK;
 }
 
 //return the next tuple that fulfills the scan conditon. if null conditon, return all tuples
 RC next(RM_ScanHandle *scan, Record *record) {
+  if (record == NULL) {
+    printf("scan.next: invalid record to pass back.\n");
+    return RC_ERROR;
+  }
 
-  return RC_OK;
+  RM_TableData* rel = scan->rel;
+  RID *rid = malloc(sizeof(RID));
+  int recordSizeInDisk = sizeof(int) + getRecordSize(scan->rel->schema);
+  int numPerPage = PAGE_SIZE / recordSizeInDisk;
+
+
+  while (scan->page < rel->fHandle.totalNumPages) {
+    while (scan->slot < numPerPage) {
+      rid->page = scan->page;
+      rid->slot = scan->slot;
+
+      RC rc = getRecord(rel, *rid, record);
+      if (rc == RC_OK) {
+        Value *compareResult = malloc(sizeof(Value));
+
+        evalExpr(record, rel->schema, scan->e, &compareResult);
+        if (compareResult != NULL && compareResult->v.boolV) {
+          free(compareResult);
+          scan->slot += 1;
+          return RC_OK;
+        }
+      } else if (rc == RC_RM_RECORD_NOT_FOUND) {
+        // marked as deleted records, ignoring
+        scan->slot += 1;
+        continue;
+      } else {
+        printf("Scan.Next: error getting record.\n");
+        return RC_ERROR;
+      }
+
+      scan->slot += 1;
+    }
+    scan->page += 1;
+  }
+
+  free(rid);
+
+  return RC_RM_NO_MORE_TUPLES;
 }
 
 // closing a scan indicates to the record manager that all associated resources can be cleaned up
 RC closeScan(RM_ScanHandle *scan) {
-
   return RC_OK;
 }
 
@@ -305,17 +417,116 @@ RC createRecord(Record **record, Schema *schema) {
 }
 
 RC freeRecord(Record *record) {
+  free(record->data);
   free(record);
   return RC_OK;
 }
 
-// get the attribute values of a record
+// Get the attribute values of a record
 RC getAttr(Record *record, Schema *schema, int attrNum, Value **value) {
+  if (schema == NULL) {
+    printf("getAttr: Invalid schema.\n");
+    return RC_ERROR;
+  }
+
+  if (attrNum >= schema->numAttr) {
+    printf("getAttr: attrNum %d / %d is out of range of total attributes.\n", attrNum, schema->numAttr);
+    return RC_ERROR;
+  }
+
+  int dataOffset = 0;
+  int i;
+  for (i = 0; i < attrNum; i++) {
+    switch(schema->dataTypes[i]) {
+      case DT_BOOL:
+      case DT_FLOAT:
+      case DT_INT:
+        dataOffset += sizeof(int);
+        break;
+      case DT_STRING:
+        dataOffset += schema->typeLength[i];
+        break;
+      default:
+        printf("getAttr: invalid attribute index.\n");
+        return RC_ERROR;
+    }
+  }
+
+  char *target = record->data + dataOffset;
+
+  *value = malloc(sizeof(Value));
+  (*value)->dt = schema->dataTypes[attrNum];
+
+  switch((*value)->dt) {
+    case DT_BOOL:
+      (*value)->v.boolV = *target;
+      break;
+    case DT_INT:
+      (*value)->v.intV = *target;
+      break;
+    case DT_FLOAT:
+      (*value)->v.floatV = *target;
+      break;
+    case DT_STRING:
+      (*value)->v.stringV = malloc(schema->typeLength[attrNum]);
+      memcpy((*value)->v.stringV, target, schema->typeLength[attrNum]);
+      break;
+    default:
+      printf("getAttr: unknown data type in value: %d.\n", (*value)->dt);
+      return RC_ERROR;
+  }
 
   return RC_OK;
 }
 
 RC setAttr(Record *record, Schema *schema, int attrNum, Value *value) {
+  if (schema == NULL) {
+    printf("setAttr: Invalid schema.\n");
+    return RC_ERROR;
+  }
+
+  if (attrNum >= schema->numAttr) {
+    printf("setAttr: attrNum %d / %d is out of range of total attributes.\n", attrNum, schema->numAttr);
+    return RC_ERROR;
+  }
+
+  if (value->dt != schema->dataTypes[attrNum]) {
+    printf("the data type in Schema is different from the type in value.\n");
+    return RC_ERROR;
+  }
+
+  int dataOffset = 0;
+  int i;
+  for (i = 0; i < attrNum; i++) {
+    switch(schema->dataTypes[i]) {
+      case DT_BOOL:
+      case DT_FLOAT:
+      case DT_INT:
+        dataOffset += sizeof(int);
+        break;
+      case DT_STRING:
+        dataOffset += schema->typeLength[i];
+        break;
+      default:
+        printf("setAttr: invalid attribute index.\n");
+        return RC_ERROR;
+    }
+  }
+
+  char *target = record->data + dataOffset;
+  switch(value->dt) {
+    case DT_BOOL:
+    case DT_INT:
+    case DT_FLOAT:
+      memcpy(target, &(value->v.intV), sizeof(int));
+      break;
+    case DT_STRING:
+      strcpy(target, value->v.stringV);
+      break;
+    default:
+      printf("setAttr: unknown data type in value: %d", value->dt);
+      return RC_ERROR;
+  }
 
   return RC_OK;
 }

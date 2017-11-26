@@ -484,7 +484,6 @@ void testScans(void) {
   TEST_DONE();
 }
 
-
 void testScansTwo(void) {
   RM_TableData *table = (RM_TableData *) malloc(sizeof(RM_TableData));
   TestRecord inserts[] = {

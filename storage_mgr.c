@@ -39,7 +39,7 @@ extern void initStorageManager(void) {
   pa = NULL;
   //fp = NULL;
   //print the initializing message
-  printf("Storage manager has been initialized!");
+  printf("Storage manager has been initialized!\n");
 
 }
 
@@ -348,20 +348,6 @@ extern RC appendEmptyBlock(SM_FileHandle *fHandle) {
 
 //If the content needed to write to file is larger than the file numberOfPages, use appendEmptyBlock to enlarge blocks enough to store the content
 extern RC ensureCapacity(int numberOfPages, SM_FileHandle *fHandle) {
-
-  // check if the file is in the opened file list
-  // int i;
-//    bool have = 0;
-//    for(i = 0; i < MAX_NUM_OPEN_FILES; i++){
-//        if(fileHandles[i] != NULL && fileHandles[i]->fileName == fHandle->fileName) {
-//            have = 1;
-//            break;
-//        }
-//    }
-//    if(!have){
-//        //printf("EnsureCapacity: File not in the open list: %s!", fHandle->fileName);
-//        //return RC_FILE_NOT_FOUND;
-//    }
 
   //add more pages to the file
   if (numberOfPages <= fHandle->totalNumPages) {

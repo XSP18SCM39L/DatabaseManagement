@@ -2,6 +2,7 @@
 #define TABLES_H
 
 #include "dt.h"
+#include "buffer_mgr.h"
 
 // Data Types, Records, and Schemas
 typedef enum DataType {
@@ -48,8 +49,8 @@ typedef struct RM_TableData {
     void *mgmtData;
 
     int numTuple;
-    //BM_BufferPool *bm;
-    //SM_FileHandle fHandle;
+    BM_BufferPool *bm;
+    SM_FileHandle fHandle;
 } RM_TableData;
 
 #define MAKE_TABLE()                    \
